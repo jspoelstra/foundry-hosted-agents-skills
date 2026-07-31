@@ -26,7 +26,7 @@ _DEFAULT_SKILLS_DIR = (
     else Path(__file__).parent / "downloaded_skills"
 )
 DOWNLOADED_SKILLS_DIR: Final = Path(os.getenv("DOWNLOADED_SKILLS_DIR", str(_DEFAULT_SKILLS_DIR)))
-SKILL_BOOTSTRAP_TIMEOUT_SECONDS: Final = 60.0
+SKILL_BOOTSTRAP_TIMEOUT_SECONDS: Final = 8.0
 
 ORDER_STATUS = {
     "A-1042": "delivered 9 days ago",
@@ -98,9 +98,10 @@ async def main() -> None:
     skills_required = _resolved_env("SKILLS_REQUIRED").lower() == "true"
     if skill_names:
         try:
+            skill_bootstrap_timeout_seconds = float(_resolved_env("SKILL_BOOTSTRAP_TIMEOUT_SECONDS") or SKILL_BOOTSTRAP_TIMEOUT_SECONDS)
             await asyncio.wait_for(
                 _bootstrap_skills(project_endpoint, skill_names, DOWNLOADED_SKILLS_DIR),
-                timeout=SKILL_BOOTSTRAP_TIMEOUT_SECONDS,
+                timeout=skill_bootstrap_timeout_seconds,
             )
             context_providers.append(
                 SkillsProvider.from_paths(
@@ -113,7 +114,8 @@ async def main() -> None:
             if skills_required:
                 raise
             LOGGER.warning(
-                "Failed to bootstrap Foundry-shared skills (%s). Continuing without skills.",
+                "Failed to bootstrap Foundry-shared skills (%s: %s). Continuing without skills.",
+                type(exc).__name__,
                 exc,
             )
     else:
