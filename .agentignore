@@ -1,0 +1,5 @@
+skills/
+downloaded_skills/
+.env
+.venv/
+__pycache__/
