@@ -112,17 +112,15 @@ AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent invoke "Can I return h
 
 ## Troubleshooting
 
-- `403 Forbidden` when provisioning/downloading skills:
-  - grant your identity (or managed identity in deployment) **Azure AI Developer** on the Foundry project:
+- `403 Forbidden` during `azd deploy` (`agents/read`) or when provisioning/downloading skills:
+  - Your identity needs **Foundry Owner** (or **Foundry User**) on both the Foundry *account* and *project* scopes — not just `Azure AI Developer`:
     ```bash
-    az role assignment create \
-      --assignee <your-object-id> \
-      --role "Azure AI Developer" \
-      --scope <AZURE_AI_PROJECT_ID from azd env get-values>
+    ACCOUNT_SCOPE="/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>"
+    PROJECT_SCOPE="${ACCOUNT_SCOPE}/projects/<project>"
+    az role assignment create --assignee <your-object-id> --role "Foundry Owner" --scope "$ACCOUNT_SCOPE"
+    az role assignment create --assignee <your-object-id> --role "Foundry Owner" --scope "$PROJECT_SCOPE"
     ```
-- `403 Forbidden` during `azd deploy` (`agents/read`):
-  - Same fix as above — your deploying identity needs **Azure AI Developer** on the project scope.
-  - After assigning the role, wait ~60 seconds for RBAC propagation then retry `azd deploy`.
+  - After assigning the roles, wait ~60 seconds for RBAC propagation then retry `azd deploy`.
 - `SKILL.md not found`:
   - each skill package must contain `SKILL.md` at archive root (handled by `provision_skills.py`).
 - Agent starts but does not apply a skill:
