@@ -128,6 +128,12 @@ AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent invoke "Can I return h
     az role assignment create --assignee <your-object-id> --role "Foundry Owner" --scope "$PROJECT_SCOPE"
     ```
   - After assigning the roles, wait ~60 seconds for RBAC propagation then retry `azd deploy`.
+- `session_not_ready` with logs showing `Skill '<name>' not found`:
+  - The deployed agent is using a different Foundry project than where skills were uploaded.
+  - Ensure `.env` and azd env both point to the same `FOUNDRY_PROJECT_ENDPOINT`, then re-run:
+    ```bash
+    python provision_skills.py
+    ```
 - `SKILL.md not found`:
   - each skill package must contain `SKILL.md` at archive root (handled by `provision_skills.py`).
 - Agent starts but does not apply a skill:
