@@ -95,18 +95,27 @@ async def main() -> None:
     skill_names = [name.strip() for name in _resolved_env("SKILL_NAMES").split(",") if name.strip()]
 
     context_providers = []
+    skills_required = _resolved_env("SKILLS_REQUIRED").lower() == "true"
     if skill_names:
-        await asyncio.wait_for(
-            _bootstrap_skills(project_endpoint, skill_names, DOWNLOADED_SKILLS_DIR),
-            timeout=SKILL_BOOTSTRAP_TIMEOUT_SECONDS,
-        )
-        context_providers.append(
-            SkillsProvider.from_paths(
-                skill_paths=str(DOWNLOADED_SKILLS_DIR),
-                disable_load_skill_approval=True,
-                disable_read_skill_resource_approval=True,
+        try:
+            await asyncio.wait_for(
+                _bootstrap_skills(project_endpoint, skill_names, DOWNLOADED_SKILLS_DIR),
+                timeout=SKILL_BOOTSTRAP_TIMEOUT_SECONDS,
             )
-        )
+            context_providers.append(
+                SkillsProvider.from_paths(
+                    skill_paths=str(DOWNLOADED_SKILLS_DIR),
+                    disable_load_skill_approval=True,
+                    disable_read_skill_resource_approval=True,
+                )
+            )
+        except Exception as exc:
+            if skills_required:
+                raise
+            LOGGER.warning(
+                "Failed to bootstrap Foundry-shared skills (%s). Continuing without skills.",
+                exc,
+            )
     else:
         LOGGER.warning("SKILL_NAMES is empty. Running without Foundry-shared skills.")
 

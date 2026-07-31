@@ -134,6 +134,9 @@ AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent invoke "Can I return h
     ```bash
     python provision_skills.py
     ```
+- `session_not_ready` with logs showing a timeout inside skill download (`_bootstrap_skills`):
+  - The app starts by downloading skills; if this is slow/failing in your environment, `SKILLS_REQUIRED=false` lets the agent start without skills instead of failing readiness.
+  - If you want fail-fast behavior (never run without skills), set `SKILLS_REQUIRED=true`.
 - `SKILL.md not found`:
   - each skill package must contain `SKILL.md` at archive root (handled by `provision_skills.py`).
 - Agent starts but does not apply a skill:
