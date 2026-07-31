@@ -95,6 +95,13 @@ azd writes `AZURE_SUBSCRIPTION_ID` and `AZURE_LOCATION` into the environment aft
 AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd provision --no-prompt
 ```
 
+Then set the required env vars (only needed once per azd environment — `azd provision` does not set these automatically):
+
+```bash
+azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME "gpt-5.4-mini"
+azd env set SKILL_NAMES "support-style,escalation-policy"
+```
+
 Then deploy and invoke:
 
 ```bash
