@@ -19,7 +19,13 @@ from typing_extensions import Annotated
 load_dotenv(override=True)
 
 LOGGER = logging.getLogger(__name__)
-DOWNLOADED_SKILLS_DIR: Final = Path(__file__).parent / "downloaded_skills"
+# Use /tmp in hosted containers (app dir is read-only); fall back to next to main.py locally.
+_DEFAULT_SKILLS_DIR = (
+    Path("/tmp/downloaded_skills")
+    if os.getenv("IDENTITY_ENDPOINT") or os.getenv("MSI_ENDPOINT") or os.getenv("WEBSITE_SITE_NAME")
+    else Path(__file__).parent / "downloaded_skills"
+)
+DOWNLOADED_SKILLS_DIR: Final = Path(os.getenv("DOWNLOADED_SKILLS_DIR", str(_DEFAULT_SKILLS_DIR)))
 SKILL_BOOTSTRAP_TIMEOUT_SECONDS: Final = 60.0
 
 ORDER_STATUS = {
