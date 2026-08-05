@@ -1,5 +1,10 @@
 skills/
 downloaded_skills/
+return_postage_tool/
+deploy_hosted_agent.py
+deploy_return_postage_tool.py
+provision_skills.py
+provision_toolbox.py
 .env
 .venv/
 __pycache__/

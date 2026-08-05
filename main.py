@@ -9,7 +9,7 @@ from typing import Final
 
 from agent_framework import Agent, SkillsProvider, tool
 from agent_framework.foundry import FoundryChatClient
-from agent_framework_foundry_hosting import ResponsesHostServer
+from agent_framework_foundry_hosting import FoundryToolbox, ResponsesHostServer
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import DefaultAzureCredential
 from dotenv import load_dotenv
@@ -42,6 +42,27 @@ def _resolved_env(name: str) -> str:
     ):
         return ""
     return value
+
+
+def _csv_env(name: str) -> list[str]:
+    return [value.strip() for value in _resolved_env(name).split(",") if value.strip()]
+
+
+def _toolbox_endpoints(project_endpoint: str) -> list[tuple[str, str]]:
+    configured_endpoints = _csv_env("TOOLBOX_ENDPOINTS")
+    configured_names = _csv_env("TOOLBOX_NAMES")
+    endpoints = [
+        (f"toolbox-{index}", endpoint)
+        for index, endpoint in enumerate(configured_endpoints, start=1)
+    ]
+    endpoints.extend(
+        (
+            name,
+            f"{project_endpoint.rstrip('/')}/toolboxes/{name}/mcp?api-version=v1",
+        )
+        for name in configured_names
+    )
+    return endpoints
 
 
 def _safe_extract_zip(zf: zipfile.ZipFile, dest_dir: Path) -> None:
@@ -92,7 +113,7 @@ def get_order_status(
 async def main() -> None:
     project_endpoint = os.environ["FOUNDRY_PROJECT_ENDPOINT"]
     model_name = os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"]
-    skill_names = [name.strip() for name in _resolved_env("SKILL_NAMES").split(",") if name.strip()]
+    skill_names = _csv_env("SKILL_NAMES")
 
     context_providers = []
     skills_required = _resolved_env("SKILLS_REQUIRED").lower() == "true"
@@ -128,14 +149,21 @@ async def main() -> None:
             credential=credential,
         )
 
+        tools = [get_order_status]
+        tools.extend(
+            FoundryToolbox(credential, name=name, url=endpoint)
+            for name, endpoint in _toolbox_endpoints(project_endpoint)
+        )
+
         agent = Agent(
             client=client,
             instructions=(
                 "You are the Contoso Outdoors support agent. "
                 "Use get_order_status when users ask about an order. "
-                "Use available skills when user intent matches them."
+                "Use available skills when user intent matches them. "
+                "Use toolbox tools when they can answer or perform the user's request."
             ),
-            tools=[get_order_status],
+            tools=tools,
             context_providers=context_providers,
             default_options={"store": False},
         )

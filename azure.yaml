@@ -29,12 +29,16 @@ services:
             resources:
                 cpu: "0.5"
                 memory: 1Gi
-        description: Hosted support agent that downloads and uses Foundry-shared skills at startup.
+        description: Hosted support agent that uses Foundry-shared skills and toolboxes.
         environmentVariables:
             - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
               value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
             - name: FOUNDRY_PROJECT_ENDPOINT
               value: ${FOUNDRY_PROJECT_ENDPOINT}
+            - name: TOOLBOX_NAMES
+              value: ${TOOLBOX_NAMES}
+            - name: TOOLBOX_ENDPOINTS
+              value: ${TOOLBOX_ENDPOINTS}
             - name: SKILL_NAMES
               value: ${SKILL_NAMES}
         kind: hosted
@@ -42,6 +46,7 @@ services:
             tags:
                 - Foundry Hosted Agent
                 - Foundry Shared Skills
+                - Foundry Toolboxes
                 - Agent Framework
                 - Teaching Demo
         name: customer-service-agent
@@ -49,4 +54,4 @@ services:
             - protocol: responses
               version: 2.0.0
 infra:
-    provider: microsoft.foundry
+  provider: microsoft.foundry
