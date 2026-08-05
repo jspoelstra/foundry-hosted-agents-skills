@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/AgentSchema/refs/heads/main/schemas/v1.0/ContainerAgent.yaml
 
 kind: hosted
-name: support-agent-shared-skills
+name: customer-service-agent
 description: >
   Hosted support agent demo that downloads skills shared in Foundry at startup.
 metadata:

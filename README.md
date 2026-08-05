@@ -130,7 +130,7 @@ python provision_skills.py
 3. Deploy code as a hosted agent version:
 
 ```bash
-python deploy_hosted_agent.py --agent-name js-test-skills --description "manual zip deploy"
+python deploy_hosted_agent.py --agent-name customer-service-agent --description "manual zip deploy"
 ```
 
 The deploy script packages the repository into a ZIP, respects `.agentignore`, and calls Foundry directly via `azure.ai.projects`.
@@ -140,7 +140,7 @@ The deploy script packages the repository into a ZIP, respects `.agentignore`, a
 ```bash
 python -c "import asyncio; from azure.ai.projects.aio import AIProjectClient; from azure.identity.aio import DefaultAzureCredential; endpoint='https://<account>.services.ai.azure.com/api/projects/<project>'; async def main():
   async with DefaultAzureCredential() as cred, AIProjectClient(endpoint=endpoint, credential=cred, allow_preview=True) as p:
-    async for v in p.agents.list_versions('js-test-skills', limit=5): print(v.version)
+    async for v in p.agents.list_versions('customer-service-agent', limit=5): print(v.version)
 asyncio.run(main())"
 ```
 
