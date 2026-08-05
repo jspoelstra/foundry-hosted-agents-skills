@@ -109,6 +109,41 @@ AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd deploy --no-prompt
 AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent invoke "Can I return hiking boots after 35 days?"
 ```
 
+## Deploy without azd provision (direct Python SDK)
+
+If `azd provision` or `azd deploy` is blocked in your environment, you can deploy a hosted agent version directly to an existing Foundry project.
+
+1. Ensure `.env` has:
+
+```bash
+FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>
+AZURE_AI_MODEL_DEPLOYMENT_NAME=<existing-model-deployment-name>
+SKILL_NAMES=support-style,escalation-policy
+```
+
+2. Upload skills first (optional but recommended for this sample):
+
+```bash
+python provision_skills.py
+```
+
+3. Deploy code as a hosted agent version:
+
+```bash
+python deploy_hosted_agent.py --agent-name js-test-skills --description "manual zip deploy"
+```
+
+The deploy script packages the repository into a ZIP, respects `.agentignore`, and calls Foundry directly via `azure.ai.projects`.
+
+4. Verify by listing versions (example):
+
+```bash
+python -c "import asyncio; from azure.ai.projects.aio import AIProjectClient; from azure.identity.aio import DefaultAzureCredential; endpoint='https://<account>.services.ai.azure.com/api/projects/<project>'; async def main():
+  async with DefaultAzureCredential() as cred, AIProjectClient(endpoint=endpoint, credential=cred, allow_preview=True) as p:
+    async for v in p.agents.list_versions('js-test-skills', limit=5): print(v.version)
+asyncio.run(main())"
+```
+
 ## Teach these concepts live
 
 1. Ask a normal support question (loads `support-style` only).
