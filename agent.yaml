@@ -3,13 +3,14 @@
 kind: hosted
 name: customer-service-agent
 description: >
-  Hosted support agent demo that downloads skills shared in Foundry at startup.
+  Hosted support agent demo that downloads shared skills and connects to Foundry toolboxes.
 metadata:
   authors:
     - Microsoft
   tags:
     - Foundry Hosted Agent
     - Foundry Shared Skills
+    - Foundry Toolboxes
 protocols:
   - protocol: responses
     version: "2.0.0"
@@ -20,6 +21,10 @@ environment_variables:
     value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
   - name: SKILL_NAMES
     value: ${SKILL_NAMES}
+  - name: TOOLBOX_NAMES
+    value: ${TOOLBOX_NAMES}
+  - name: TOOLBOX_ENDPOINTS
+    value: ${TOOLBOX_ENDPOINTS}
 resources:
   cpu: "0.5"
   memory: "1Gi"

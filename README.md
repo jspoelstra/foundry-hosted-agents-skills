@@ -1,43 +1,81 @@
-# Foundry Hosted Agent + Foundry-Shared Skills (Teaching Demo)
+---
+title: Foundry Hosted Agent with Shared Skills and Tools
+description: Teaching sample for a hosted agent that consumes Foundry skills, tools, and toolboxes
+---
 
-This sample demonstrates a **hosted agent** that uses **skills shared in Azure AI Foundry** (not skills packaged with the agent image).
+This sample demonstrates a hosted agent that uses skills and toolboxes shared in
+Microsoft Foundry rather than packaging those resources in the agent image.
 
 The learning loop is:
 
 1. Author `SKILL.md` files locally.
-2. Upload skills into the Foundry project (`provision_skills.py`).
-3. Start/deploy agent.
-4. Agent downloads skills from Foundry at startup and uses them via `load_skill` on demand.
+2. Upload the skills with `provision_skills.py`.
+3. Connect existing project tools or create the sample return-postage tool.
+4. Create a toolbox containing tools and skill references with
+  `provision_toolbox.py`.
+5. Start or deploy the agent. It downloads skills and connects to the configured
+  toolbox MCP endpoints.
 
 ## What this demo proves
 
-- The agent runs even when no local `skills/` folder is mounted into runtime context.
-- Skill behavior updates without code changes: edit `SKILL.md`, re-upload, restart/redeploy.
-- Skills are progressively disclosed (name/description first, full instructions loaded only when relevant).
+* The agent runs without mounting the local `skills/` folder into runtime context
+* Skill behavior updates without code changes after upload and agent restart
+* Skills are progressively disclosed by the Agent Framework skills provider
+* Existing Foundry toolboxes can be attached by name or explicit MCP endpoint
+* Existing connection-backed project tools can be composed into a new toolbox
+* One toolbox can contain both tools and Foundry skill references
 
 ## Prerequisites
 
-- Python 3.13+
-- `az login` completed (you already have this)
-- `azd` installed
-- `azd` extensions:
-  - `azure.ai.agents`
-  - `azure.ai.skills`
+* Python 3.13+
+* Azure CLI with `az login` completed
+* Azure Developer CLI with `azd auth login` completed
+* The unified Microsoft Foundry extension
 
-Install extensions if needed:
+Install or update the extension if needed:
 
 ```bash
-AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd extension install azure.ai.agents
-AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd extension install azure.ai.skills
+AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd extension install microsoft.foundry
 ```
 
 ## Project files
 
-- `main.py` – hosted agent entry point
-- `provision_skills.py` – uploads skills to Foundry
-- `skills/*/SKILL.md` – local source of skills to publish
-- `azure.yaml` – azd project + agent service definition
-- `.agentignore` – excludes `skills/` from deploy package so runtime only uses Foundry-downloaded skills
+* `main.py`: hosted agent entry point
+* `provision_skills.py`: uploads skills to Foundry
+* `provision_toolbox.py`: creates a toolbox from existing tools, skills, and the
+  sample OpenAPI tool
+* `deploy_return_postage_tool.py`: deploys the sample API to Azure Container Apps
+* `return_postage_tool/`: source and Dockerfile for the sample API
+* `skills/*/SKILL.md`: local source of skills to publish
+* `azure.yaml`: azd project and agent service definition
+* `.agentignore`: excludes local skill and provisioning sources from the agent
+  deployment
+
+## Environment configuration
+
+Copy the template and set the project and model values:
+
+```bash
+cp .env.example .env
+```
+
+The tool-related settings are:
+
+* `TOOL_NAMES`: comma-separated names of existing Foundry project connections
+  that represent connection-backed tools, such as MCP or Azure AI Search
+  connections. `provision_toolbox.py` includes them in the new toolbox.
+* `TOOLBOX_NAMES`: comma-separated names of existing toolboxes in the same
+  project. The agent constructs each consumer MCP endpoint from the project
+  endpoint and toolbox name.
+* `TOOLBOX_ENDPOINTS`: comma-separated explicit toolbox MCP endpoints. Use this
+  for toolboxes in another project or to test a version-specific endpoint.
+* `TOOLBOX_TO_CREATE`: name created by `provision_toolbox.py`.
+* `RETURN_POSTAGE_API_URL`: HTTPS base URL produced by the sample tool deployment.
+
+Foundry tools are tool definitions or project connections, not independently
+callable runtime endpoints. The agent therefore consumes toolboxes directly.
+`TOOL_NAMES` is used when creating a toolbox, while `TOOLBOX_NAMES` and
+`TOOLBOX_ENDPOINTS` are used by the running agent.
 
 ## Quick start
 
@@ -50,24 +88,15 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-2. Configure environment:
+1. Configure `.env` as described above.
 
-```bash
-cp .env.example .env
-```
-
-Set:
-- `FOUNDRY_PROJECT_ENDPOINT`
-- `AZURE_AI_MODEL_DEPLOYMENT_NAME`
-- `SKILL_NAMES` (default in `.env.example` is fine)
-
-3. Upload / refresh skills in Foundry:
+1. Upload or refresh skills in Foundry:
 
 ```bash
 python provision_skills.py
 ```
 
-4. Run locally:
+1. Run locally. Toolbox configuration is optional:
 
 ```bash
 python main.py
@@ -80,6 +109,43 @@ curl -sS -X POST http://localhost:8088/responses \
   -H "Content-Type: application/json" \
   -d '{"input":"I want a $900 refund for a damaged tent and I am threatening legal action.","stream":false}'
 ```
+
+## Create the sample tool and toolbox
+
+The return-postage API is intentionally simple and anonymous for teaching. Do
+not use its pricing formula or anonymous ingress as a production shipping service.
+
+1. Deploy the tool. The command creates or updates a Container App and writes its
+  HTTPS URL to `.env`:
+
+```bash
+python deploy_return_postage_tool.py \
+  --resource-group <resource-group> \
+  --location <location> \
+  --write-env
+```
+
+1. Upload the local skills if they are not already in the project:
+
+```bash
+python provision_skills.py
+```
+
+1. Create a toolbox containing the return-postage OpenAPI tool, every connection
+  in `TOOL_NAMES`, and every skill in `SKILL_NAMES`:
+
+```bash
+python provision_toolbox.py --write-env
+```
+
+The first toolbox version becomes the default. The script writes its name to
+`TOOLBOX_NAMES`, so the next local run or deployment connects to the consumer
+endpoint automatically.
+
+To use only existing resources, leave `RETURN_POSTAGE_API_URL` empty, set
+`TOOL_NAMES` to existing project connection names, and run the same toolbox
+provisioning command. To consume existing toolboxes without creating one, set
+`TOOLBOX_NAMES` or `TOOLBOX_ENDPOINTS` and skip both provisioning scripts.
 
 ## Deploy with azd
 
@@ -95,11 +161,14 @@ azd writes `AZURE_SUBSCRIPTION_ID` and `AZURE_LOCATION` into the environment aft
 AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd provision --no-prompt
 ```
 
-Then set the required env vars (only needed once per azd environment — `azd provision` does not set these automatically):
+Then set the required environment values. These are needed once per azd
+environment because `azd provision` does not set them automatically:
 
 ```bash
 azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME "gpt-5.4-mini"
 azd env set SKILL_NAMES "support-style,escalation-policy"
+azd env set TOOLBOX_NAMES "customer-service-toolbox"
+azd env set TOOLBOX_ENDPOINTS ""
 ```
 
 Then deploy and invoke:
@@ -121,21 +190,24 @@ AZURE_AI_MODEL_DEPLOYMENT_NAME=<existing-model-deployment-name>
 SKILL_NAMES=support-style,escalation-policy
 ```
 
-2. Upload skills first (optional but recommended for this sample):
+1. Upload skills first (optional but recommended for this sample):
 
 ```bash
 python provision_skills.py
 ```
 
-3. Deploy code as a hosted agent version:
+1. Deploy code as a hosted agent version:
 
 ```bash
 python deploy_hosted_agent.py --agent-name customer-service-agent --description "manual zip deploy"
 ```
 
-The deploy script packages the repository into a ZIP, respects `.agentignore`, and calls Foundry directly via `azure.ai.projects`.
+The deploy script packages the repository into a ZIP, respects `.agentignore`,
+and calls Foundry directly through `azure.ai.projects`. It reads
+`TOOLBOX_NAMES` and `TOOLBOX_ENDPOINTS` from `.env` and passes them to the hosted
+agent version.
 
-4. Verify by listing versions (example):
+1. Verify by listing versions (example):
 
 ```bash
 python -c "import asyncio; from azure.ai.projects.aio import AIProjectClient; from azure.identity.aio import DefaultAzureCredential; endpoint='https://<account>.services.ai.azure.com/api/projects/<project>'; async def main():
@@ -146,33 +218,49 @@ asyncio.run(main())"
 
 ## Teach these concepts live
 
-1. Ask a normal support question (loads `support-style` only).
-2. Ask a legal/refund-escalation question (loads `escalation-policy` + `support-style`).
-3. Change a canary token in `skills/escalation-policy/SKILL.md`.
-4. Re-run `python provision_skills.py`.
-5. Restart agent and ask the same escalation prompt; show updated canary in output.
+1. Ask a normal support question to load `support-style` only.
+2. Ask a legal or refund-escalation question to load both skills.
+3. Ask for return postage for a 2 kg package traveling 750 km to invoke the
+  toolbox OpenAPI tool.
+4. Change a canary token in `skills/escalation-policy/SKILL.md`.
+5. Re-run `python provision_skills.py`.
+6. Restart the agent and show the updated behavior without a code change.
 
 ## Troubleshooting
 
-- `403 Forbidden` during `azd deploy` (`agents/read`) or when provisioning/downloading skills:
-  - Your identity needs **Foundry Owner** (or **Foundry User**) on both the Foundry *account* and *project* scopes — not just `Azure AI Developer`:
+* `azd` reports an expired login while creating a toolbox:
+  * Run `azd auth login`, then retry `python provision_toolbox.py`.
+* `403 Forbidden` during deployment or project resource provisioning:
+  * Your identity needs **Foundry Owner** or **Foundry User** on both the Foundry
+    account and project scopes, not only `Azure AI Developer`:
+
     ```bash
     ACCOUNT_SCOPE="/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>"
     PROJECT_SCOPE="${ACCOUNT_SCOPE}/projects/<project>"
     az role assignment create --assignee <your-object-id> --role "Foundry Owner" --scope "$ACCOUNT_SCOPE"
     az role assignment create --assignee <your-object-id> --role "Foundry Owner" --scope "$PROJECT_SCOPE"
     ```
-  - After assigning the roles, wait ~60 seconds for RBAC propagation then retry `azd deploy`.
-- `session_not_ready` with logs showing `Skill '<name>' not found`:
-  - The deployed agent is using a different Foundry project than where skills were uploaded.
-  - Ensure `.env` and azd env both point to the same `FOUNDRY_PROJECT_ENDPOINT`, then re-run:
+
+  * Wait about 60 seconds for RBAC propagation before retrying.
+* `session_not_ready` with `Skill '<name>' not found`:
+  * Ensure `.env` and the azd environment point to the project where the skills
+    were uploaded, then re-run:
+
     ```bash
     python provision_skills.py
     ```
-- `session_not_ready` with logs showing a timeout inside skill download (`_bootstrap_skills`):
-  - The app starts by downloading skills; if this is slow/failing in your environment, `SKILLS_REQUIRED=false` lets the agent start without skills instead of failing readiness.
-  - If you want fail-fast behavior (never run without skills), set `SKILLS_REQUIRED=true`.
-- `SKILL.md not found`:
-  - each skill package must contain `SKILL.md` at archive root (handled by `provision_skills.py`).
-- Agent starts but does not apply a skill:
-  - improve `description` in skill front matter to make routing intent clearer.
+
+* Skill bootstrap times out:
+  * `SKILLS_REQUIRED=false` lets the agent start without skills. Set it to `true`
+    for fail-fast behavior.
+* `SKILL.md not found`:
+  * Each skill package must contain `SKILL.md` at its archive root.
+* Toolbox creation reports that a connection or skill is missing:
+  * `TOOL_NAMES` and `SKILL_NAMES` must reference resources in the same Foundry
+    project as `FOUNDRY_PROJECT_ENDPOINT`.
+* Toolbox creation reports that the toolbox already exists:
+  * Choose a new `TOOLBOX_TO_CREATE`, or delete the teaching toolbox before recreating
+    it. Toolbox versions are immutable.
+* The agent starts but does not apply a skill or tool:
+  * Improve the skill front matter description or the tool description so the
+    model can route the request correctly.

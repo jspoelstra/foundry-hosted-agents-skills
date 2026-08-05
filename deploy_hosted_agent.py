@@ -92,6 +92,16 @@ def create_parser() -> argparse.ArgumentParser:
         help="Comma-separated skill names passed as SKILL_NAMES env var.",
     )
     parser.add_argument(
+        "--toolbox-names",
+        default=os.getenv("TOOLBOX_NAMES", ""),
+        help="Comma-separated Foundry toolbox names passed as TOOLBOX_NAMES.",
+    )
+    parser.add_argument(
+        "--toolbox-endpoints",
+        default=os.getenv("TOOLBOX_ENDPOINTS", ""),
+        help="Comma-separated toolbox MCP endpoints passed as TOOLBOX_ENDPOINTS.",
+    )
+    parser.add_argument(
         "--description",
         default="Code deploy via deploy_hosted_agent.py",
         help="Version description shown in Foundry.",
@@ -216,6 +226,8 @@ async def _deploy(args: argparse.Namespace) -> None:
         "AZURE_AI_MODEL_DEPLOYMENT_NAME": args.model_deployment,
         "FOUNDRY_PROJECT_ENDPOINT": endpoint,
         "SKILL_NAMES": args.skill_names,
+        "TOOLBOX_NAMES": args.toolbox_names,
+        "TOOLBOX_ENDPOINTS": args.toolbox_endpoints,
     }
 
     definition = HostedAgentDefinition(
