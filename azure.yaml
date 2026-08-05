@@ -16,7 +16,7 @@ services:
               sku:
                 capacity: 10
                 name: GlobalStandard
-    support-agent-shared-skills:
+    customer-service-agent:
         project: .
         host: azure.ai.agent
         language: python
@@ -44,7 +44,7 @@ services:
                 - Foundry Shared Skills
                 - Agent Framework
                 - Teaching Demo
-        name: support-agent-shared-skills
+        name: customer-service-agent
         protocols:
             - protocol: responses
               version: 2.0.0
