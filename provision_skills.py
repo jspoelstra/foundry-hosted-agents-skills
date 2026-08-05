@@ -1,6 +1,7 @@
 import asyncio
 import io
 import os
+from urllib.parse import urlparse
 import zipfile
 from pathlib import Path
 
@@ -11,6 +12,41 @@ from azure.identity.aio import DefaultAzureCredential
 from dotenv import load_dotenv
 
 SKILLS_DIR = Path(__file__).parent / "skills"
+
+
+def _validate_foundry_endpoint(raw_value: str) -> str:
+    endpoint = raw_value.strip()
+    if not endpoint:
+        raise RuntimeError(
+            "FOUNDRY_PROJECT_ENDPOINT is empty. Set it in .env or shell environment."
+        )
+
+    if "<" in endpoint or ">" in endpoint:
+        raise RuntimeError(
+            "FOUNDRY_PROJECT_ENDPOINT still contains placeholders. "
+            "Replace <account> and <project> with real values."
+        )
+
+    parsed = urlparse(endpoint)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise RuntimeError(
+            "FOUNDRY_PROJECT_ENDPOINT must be a valid https URL like "
+            "https://<account>.services.ai.azure.com/api/projects/<project>."
+        )
+
+    expected_host_suffix = ".services.ai.azure.com"
+    if not parsed.netloc.endswith(expected_host_suffix):
+        raise RuntimeError(
+            "FOUNDRY_PROJECT_ENDPOINT host must end with .services.ai.azure.com."
+        )
+
+    expected_path_prefix = "/api/projects/"
+    if not parsed.path.startswith(expected_path_prefix) or len(parsed.path) <= len(expected_path_prefix):
+        raise RuntimeError(
+            "FOUNDRY_PROJECT_ENDPOINT path must look like /api/projects/<project>."
+        )
+
+    return endpoint
 
 
 def _zip_skill_dir(skill_dir: Path) -> bytes:
@@ -45,7 +81,7 @@ async def _create_skill(project: AIProjectClient, name: str, zip_bytes: bytes) -
 
 async def main() -> None:
     load_dotenv(override=True)
-    endpoint = os.environ["FOUNDRY_PROJECT_ENDPOINT"]
+    endpoint = _validate_foundry_endpoint(os.environ["FOUNDRY_PROJECT_ENDPOINT"])
 
     skill_dirs = sorted(d for d in SKILLS_DIR.iterdir() if d.is_dir() and (d / "SKILL.md").exists())
     if not skill_dirs:
