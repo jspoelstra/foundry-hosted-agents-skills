@@ -102,7 +102,14 @@ python provision_skills.py
 python main.py
 ```
 
-In another terminal:
+In another terminal, start an interactive chat session:
+
+```bash
+python chat.py
+```
+
+Type `/exit` or press `Ctrl+D` to end the session. You can also send a single
+request with `curl`:
 
 ```bash
 curl -sS -X POST http://localhost:8088/responses \
@@ -176,6 +183,23 @@ Then deploy and invoke:
 ```bash
 AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd deploy --no-prompt
 AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent invoke "Can I return hiking boots after 35 days?"
+```
+
+To start an interactive chat with the deployed agent, run this command from the
+project directory. The first message starts a new remote conversation, and later
+messages reuse it:
+
+```bash
+python chat.py --remote
+```
+
+Use `--service customer-service-agent` when the azd project contains multiple
+agents. Outside the project directory, pass the full protocol endpoint with
+`--agent-endpoint`. The endpoint identifies the deployed agent, while `azd`
+uses your existing Azure Developer CLI login to authenticate the request.
+
+```bash
+python chat.py --remote --agent-endpoint "https://<full-protocol-endpoint>"
 ```
 
 ## Deploy without azd provision (direct Python SDK)
