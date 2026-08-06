@@ -131,6 +131,7 @@ def _invoke_remote(
             capture_output=True,
             check=True,
             text=True,
+            encoding="utf-8",
             timeout=timeout,
         )
     except FileNotFoundError as exc:
